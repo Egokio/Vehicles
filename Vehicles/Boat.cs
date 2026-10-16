@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Vehicles.Core
 {
-    public class Boat : Vehicle, ISwimmable
+    public class Boat : Vehicle, ISwimmable, IBoatGarageVehicle
     {
         public Boat(string make, string model)
             : base(make, model)
@@ -20,5 +20,25 @@ namespace Vehicles.Core
         {
             return base.Move(km);
         }
+        public string Signal()
+        {
+            return $"{Make} {Model} sounds its horn! Honk honk!";
+        }
+
+        public string FlashLights()
+        {
+            return $"{Make} {Model} flashes its navigation lights!";
+        }
+
+        public string SignalAsBoat()
+        {
+            return Signal();
+        }
+
+        public string FlashLightsAsBoat()
+        {
+            return FlashLights();
+        }
+
     }
 }

@@ -17,7 +17,10 @@ namespace Vehicles.WpfApp
     /// </summary>
     public partial class MainWindow : Window
     {
+        private readonly CarGarage carGarage = new();
+        private readonly BoatGarage boatGarage = new();
         private readonly VehicleManager vehicleManager = new();
+
 
         public MainWindow()
         {
@@ -27,11 +30,17 @@ namespace Vehicles.WpfApp
             VehicleTypeBox.Items.Add("Boat");
             VehicleTypeBox.Items.Add("AmphibiousCar");
 
-            VehiclesGrid.ItemsSource = vehicleManager.Vehicles;
+            CarsListBox.ItemsSource = carGarage.Cars;
+            BoatsListBox.ItemsSource = boatGarage.Boats;
+
+            CarsListBox.DisplayMemberPath = "Model";
+            BoatsListBox.DisplayMemberPath = "Model";
 
             DriveButton.IsEnabled = false;
             SwimButton.IsEnabled = false;
         }
+
+
 
 
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -41,28 +50,55 @@ namespace Vehicles.WpfApp
                 string make = MakeBox.Text.Trim();
                 string model = ModelBox.Text.Trim();
 
-                Vehicle vehicle;
-
                 switch (VehicleTypeBox.SelectedItem?.ToString())
                 {
                     case "Car":
-                        vehicle = new Car(make, model);
-                        break;
+                        {
+                            Car car = new Car(make, model);
+                            string message = carGarage.AddCar(car);
+
+                            AddLogMessages(message);
+
+                            LogListBox.Items.Add(
+                                $"Added car: {car.Make} {car.Model}.");
+
+                            break;
+                        }
 
                     case "Boat":
-                        vehicle = new Boat(make, model);
-                        break;
+                        {
+                            Boat boat = new Boat(make, model);
+                            string message = boatGarage.AddBoat(boat);
+
+                            AddLogMessages(message);
+
+                            LogListBox.Items.Add(
+                                $"Added boat: {boat.Make} {boat.Model}.");
+
+                            break;
+                        }
+
 
                     case "AmphibiousCar":
-                        vehicle = new AmphibiousCar(make, model);
-                        break;
+                        {
+                            AmphibiousCar amphibiousCar =
+                                new AmphibiousCar(make, model);
+
+                            AddLogMessages(carGarage.AddCar(amphibiousCar));
+                            AddLogMessages(boatGarage.AddBoat(amphibiousCar));
+
+                            LogListBox.Items.Add(
+                                $"Added amphibious car to both garages: " +
+                                $"{amphibiousCar.Make} {amphibiousCar.Model}.");
+
+                            break;
+                        }
+
 
                     default:
                         MessageBox.Show("Please select a vehicle type.");
                         return;
                 }
-
-                vehicleManager.AddVehicle(vehicle);
 
                 MakeBox.Clear();
                 ModelBox.Clear();
@@ -75,33 +111,29 @@ namespace Vehicles.WpfApp
         }
 
 
+
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-
             try
             {
-                if (VehiclesGrid.SelectedItem is not Vehicle vehicle)
+                if (CarsListBox.SelectedItem is not Vehicle vehicle ||
+                    vehicle is not IDriveable driveable)
                 {
-                    MessageBox.Show("Please select a vehicle.");
+                    MessageBox.Show("Please select a vehicle that can drive.");
                     return;
                 }
 
                 if (!double.TryParse(DistanceBox.Text, out double km))
                 {
                     MessageBox.Show("Please enter a valid distance.");
-                    return;
-                }
-
-                if (vehicle is not IDriveable driveable)
-                {
-                    MessageBox.Show("This vehicle cannot be driven.");
                     return;
                 }
 
                 string message = driveable.Drive(km);
 
                 LogListBox.Items.Add(message);
-                VehiclesGrid.Items.Refresh();
+                CarsListBox.Items.Refresh();
+                BoatsListBox.Items.Refresh();
             }
             catch (ArgumentException ex)
             {
@@ -109,13 +141,16 @@ namespace Vehicles.WpfApp
             }
         }
 
+
+
         private void SwimButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                if (VehiclesGrid.SelectedItem is not Vehicle vehicle)
+                if (BoatsListBox.SelectedItem is not Vehicle vehicle ||
+                    vehicle is not ISwimmable swimmable)
                 {
-                    MessageBox.Show("Please select a vehicle.");
+                    MessageBox.Show("Please select a vehicle that can swim.");
                     return;
                 }
 
@@ -125,16 +160,11 @@ namespace Vehicles.WpfApp
                     return;
                 }
 
-                if (vehicle is not ISwimmable swimmable)
-                {
-                    MessageBox.Show("This vehicle cannot swim.");
-                    return;
-                }
-
                 string message = swimmable.Swim(km);
 
                 LogListBox.Items.Add(message);
-                VehiclesGrid.Items.Refresh();
+                CarsListBox.Items.Refresh();
+                BoatsListBox.Items.Refresh();
             }
             catch (ArgumentException ex)
             {
@@ -142,37 +172,120 @@ namespace Vehicles.WpfApp
             }
         }
 
-        private void VehiclesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (VehiclesGrid.SelectedItem is Vehicle vehicle)
-            {
-                LogListBox.Items.Add(
-                    $"Selected: {vehicle.Make} {vehicle.Model}, " +
-                    $"Odometer: {vehicle.Odometer} km.");
 
-                DriveButton.IsEnabled = vehicle is IDriveable;
-                SwimButton.IsEnabled = vehicle is ISwimmable;
+
+        private void CarsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (CarsListBox.SelectedItem is ICarGarageVehicle car)
+            {
+                BoatsListBox.SelectedItem = null;
+
+                if (car is Vehicle vehicle)
+                {
+                    LogListBox.Items.Add(
+                        $"Selected car: {vehicle.Make} {vehicle.Model}, " +
+                        $"Odometer: {vehicle.Odometer} km.");
+                }
+
+                DriveButton.IsEnabled = true;
+                SwimButton.IsEnabled = false;
             }
-            else
+            else if (BoatsListBox.SelectedItem == null)
             {
                 DriveButton.IsEnabled = false;
                 SwimButton.IsEnabled = false;
             }
         }
 
-        private void DeleteVehicleButton_Click(object sender, RoutedEventArgs e)
+
+
+
+        private void BoatsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (VehiclesGrid.SelectedItem is not Vehicle vehicle)
+            if (BoatsListBox.SelectedItem is IBoatGarageVehicle boat)
             {
-                MessageBox.Show("Please select a vehicle.");
+                CarsListBox.SelectedItem = null;
+
+                if (boat is Vehicle vehicle)
+                {
+                    LogListBox.Items.Add(
+                        $"Selected boat: {vehicle.Make} {vehicle.Model}, " +
+                        $"Odometer: {vehicle.Odometer} km.");
+                }
+
+                DriveButton.IsEnabled = false;
+                SwimButton.IsEnabled = true;
+            }
+            else if (CarsListBox.SelectedItem == null)
+            {
+                DriveButton.IsEnabled = false;
+                SwimButton.IsEnabled = false;
+            }
+        }
+
+
+
+        private void DeleteCarButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (CarsListBox.SelectedItem is not ICarGarageVehicle car)
+            {
+                MessageBox.Show("Please select a car to remove.");
                 return;
             }
 
-            vehicleManager.RemoveVehicle(vehicle);
+            string message = carGarage.RemoveCar(car);
+            AddLogMessages(message);
+
+            if (car is Vehicle vehicle)
+            {
+                LogListBox.Items.Add(
+                    $"Removed from Car Garage: {vehicle.Make} {vehicle.Model}.");
+            }
 
             DriveButton.IsEnabled = false;
             SwimButton.IsEnabled = false;
         }
+
+
+
+
+        private void DeleteBoatButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (BoatsListBox.SelectedItem is not IBoatGarageVehicle boat)
+            {
+                MessageBox.Show("Please select a boat to remove.");
+                return;
+            }
+
+            string message = boatGarage.RemoveBoat(boat);
+            AddLogMessages(message);
+
+            if (boat is Vehicle vehicle)
+            {
+                LogListBox.Items.Add(
+                    $"Removed from Boat Garage: {vehicle.Make} {vehicle.Model}.");
+            }
+
+            DriveButton.IsEnabled = false;
+            SwimButton.IsEnabled = false;
+        }
+
+
+
+
+        private void AddLogMessages(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            foreach (string line in message.Split(
+                new[] { '\r', '\n' },
+                StringSplitOptions.RemoveEmptyEntries))
+            {
+                LogListBox.Items.Add(line);
+            }
+        }
+
 
         private void TextBox_TextChanged_1(object sender, TextChangedEventArgs e)
         {

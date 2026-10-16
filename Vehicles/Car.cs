@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Vehicles.Core
 {
-    public class Car : Vehicle, IDriveable
+    public class Car : Vehicle, IDriveable, ICarGarageVehicle
     {
         public Car(string make, string model)
             : base(make, model)
@@ -20,5 +20,26 @@ namespace Vehicles.Core
         {
             return base.Move(km);
         }
+        public string Signal()
+        {
+            return $"{Make} {Model} honks the horn! Beep beep!";
+        }
+
+        public string FlashLights()
+        {
+            return $"{Make} {Model} flashes its headlights!";
+        }
+
+        public string SignalAsCar()
+        {
+            return Signal();
+        }
+
+        public string FlashLightsAsCar()
+        {
+            return FlashLights();
+        }
+
+
     }
 }
